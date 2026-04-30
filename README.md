@@ -52,7 +52,7 @@ situacao3.
 
 Este código em Prolog implementa um Planejador Espacial para o problema do "Mundo dos Blocos". Ele utiliza uma técnica de busca chamada BFS (Busca em Largura) para encontrar o caminho mais curto entre uma configuração inicial de blocos e uma configuração final.
 
-###1. Modelagem do Mundo (Estrutura de Dados)
+### 1. Modelagem do Mundo (Estrutura de Dados)
 O código não usa uma matriz fixa; ele usa uma Lista de Factos Dinâmicos.
 
 *`pos(Bloco, Coluna, Altura)`: Isto é um objeto lógico. Quando o código vê `pos(a, 3, 0)`, ele entende que o bloco `a` está na base da coluna 3.
