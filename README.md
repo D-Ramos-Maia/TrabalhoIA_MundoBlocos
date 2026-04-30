@@ -55,9 +55,9 @@ Este código em Prolog implementa um Planejador Espacial para o problema do "Mun
 ### 1. Modelagem do Mundo (Estrutura de Dados)
 O código não usa uma matriz fixa; ele usa uma Lista de Factos Dinâmicos.
 
-*`pos(Bloco, Coluna, Altura)`: Isto é um objeto lógico. Quando o código vê `pos(a, 3, 0)`, ele entende que o bloco `a` está na base da coluna 3.
+* `pos(Bloco, Coluna, Altura)`: Isto é um objeto lógico. Quando o código vê `pos(a, 3, 0)`, ele entende que o bloco `a` está na base da coluna 3.
 
-**Flexibilidade*: Diferente de modelos que usam apenas `on(A, B)`, esta estrutura permite que o bloco esteja em qualquer lugar horizontalmente (0 a 6), atendendo ao requisito de "espaços horizontais" do seu professor.
+* *Flexibilidade*: Diferente de modelos que usam apenas `on(A, B)`, esta estrutura permite que o bloco esteja em qualquer lugar horizontalmente (0 a 6), atendendo ao requisito de "espaços horizontais" do seu professor.
 
 
 
