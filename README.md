@@ -59,10 +59,35 @@ O código não usa uma matriz fixa; ele usa uma Lista de Factos Dinâmicos.
 
 * *Flexibilidade*: Diferente de modelos que usam apenas `on(A, B)`, esta estrutura permite que o bloco esteja em qualquer lugar horizontalmente (0 a 6), atendendo ao requisito de "espaços horizontais" do seu professor.
 
+## 2. A Lógica de Transição (As Regras da Física)
 
+Aqui é onde o código decide se um movimento é "legal" ou não:
 
+* *Verificação de Obstáculos (`topo_livre`)*:
 
+```prolog
+\+ (member(pos(_, Col, AltX), Estado), AltX > Alt)
+```
+Este trecho é uma *Negação por Falha*. Ele diz: "Procure qualquer bloco na mesma coluna (`Col`) que tenha uma altura (`AltX`) maior que a minha (`Alt`). Se não encontrar nenhum, o topo está livre."
 
+* *Cálculo Dinâmico de Empilhamento (`altura_coluna`)*:
+Antes de mover o bloco para a coluna `Pj`, o código usa `findall` para contar quantos blocos já existem lá. Se houver 2 blocos, a nova altura será 2 (os índices são 0, 1, 2). Isso simula a gravidade: o bloco sempre "cai" na posição mais baixa disponível daquela coluna.
 
+* *Manipulação da Lista (`aplicar_move`)*:
+O predicado `select(pos(B, Pi, _), Estado, Temp)` é crucial. Ele remove a posição antiga do bloco da lista e guarda o resto do mundo em `Temp`. Depois, o código adiciona a nova posição: `[pos(B, Pj, NovaAlt) | Temp]`.
 
+## 3. O Mecanismo de Inteligência (BFS - Busca em Largura)
 
+O "cérebro" do planeador é o algoritmo BFS. Ele funciona como uma onda se espalhando:
+
+1. *Fila de Exploração*: O código mantém uma lista de caminhos possíveis. *Exemplo*: `[[EstadoInicial, []]]`.
+
+2. *Expansão*: Ele pega o primeiro estado da fila e tenta todos os movimentos possíveis (bloco A para col 0, A para col 1... bloco B para col 0, etc.).
+
+3. *Prevenção de Ciclos (`ja_na_fila`)*: Se um movimento resulta num estado que o código já viu antes, ele descarta esse caminho. Sem isto, o robô ficaria movendo o bloco `a` da coluna 1 para a 2 e de volta para a 1 eternamente.
+
+4. *Garantia de Curto Caminho*: Por ser BFS, ele testa todos os planos de 1 movimento, depois todos os de 2, depois todos os de 3. Assim que encontrar o objetivo (`mesmo_estado`), ele garante que aquele é o plano com o menor número de passos.
+
+##4. Execução das Situações (Os Testes)
+
+No final do código, as funções `situacao1`, `2` e `3` definem o *Estado Inicial (S0)* e o *Estado Objetivo (Sf)*.
