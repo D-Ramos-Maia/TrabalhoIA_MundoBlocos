@@ -39,12 +39,10 @@ situacao1.
 ### Situação 2
 ```prolog
 % Comando para executar a situação 2
-Situação 2:
 situacao2.
 ```
 
-### Situação 2
+### Situação 3
 ```prolog
 % Comando para executar a situação 3
-Situação 3:
 situacao3.
