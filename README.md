@@ -1,28 +1,50 @@
-#Inteligência Artificial - 1º Trabalho Prático: Representação do Conhecimento para Gerar Planejador que Empilha Blocos de Diferentes Dimensões
-_________________________________________________________
-Beatriz Augusta Coelho Bezerra
-Daniel Ramos Maia
-Victor Lima Frazão
-_________________________________________________________
-##Instituto de Computação - UFAM Professor Edjard Mota 2026
+# Inteligência Artificial - 1º Trabalho Prático
+## Representação do Conhecimento para Gerar Planejador que Empilha Blocos de Diferentes Dimensões
 
-#Represetação do conhecimento
+**Integrantes:**
+* Beatriz Augusta Coelho Bezerra
+* Daniel Ramos Maia
+* Victor Lima Frazão
 
-1. Desenvolver o problema para em linguagem natural, sobre blocos distintos em comprimento, mas iguais em altura.
-2. Pedir para uma IA generativa para gerar um código em prolog, que resolve em totalidade cada situação proposta.
+**Instituição:** Instituto de Computação - UFAM  
+**Professor:** Edjard Mota (2026)
 
-#Raciocínio e planejamento
+---
 
-3. O objetivo do uso da IA e transforma a linguagem natural em uma linguem que uma máquina seja capaz de compreender
-4. A IA escolhida para essa aplicação foi a Claude.
+## 1. Representação do Conhecimento
 
-#Execução do código 
+### Linguagem Natural
+Neste trabalho, abordamos o problema do Mundo dos Blocos onde os blocos possuem comprimentos variáveis, mas mantêm a mesma altura. A representação precisa considerar não apenas o que está "sobre" o quê, mas também o espaço horizontal ocupado (coordenadas ou largura) para garantir o equilíbrio e a viabilidade do empilhamento.
 
-Situação 1:
-´situacao1.´
+### Uso de IA Generativa
+Utilizamos a IA **Claude** para auxiliar na tradução das restrições de lógica de primeira ordem para código **Prolog**, visando resolver as situações de planejamento propostas.
 
+---
+
+## 2. Raciocínio e Planejamento
+
+O objetivo central foi transformar a descrição do cenário e as regras de física/empilhamento (linguagem natural) em predicados lógicos que a máquina possa processar via *goal regression planning*.
+
+---
+
+## 3. Execução do Código 
+
+Abaixo estão os comandos/predicados para executar as resoluções de cada cenário no Prolog:
+
+### Situação 1
+```prolog
+% Comando para executar a situação 1
+situacao1.
+```
+### Situação 2
+```prolog
+% Comando para executar a situação 2
 Situação 2:
 ´situacao2.´
+```
 
+### Situação 2
+```prolog
+% Comando para executar a situação 3
 Situação 3:
 ´situacao3.´
