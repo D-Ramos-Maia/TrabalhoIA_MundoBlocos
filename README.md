@@ -11,6 +11,31 @@
 
 ---
 
+## Como executar o código  
+
+O código foi pensado para ser executado via Swish-prolog (https://swish.swi-prolog.org/), para o executar basta apenas executar os seguintes comandos no terminal.
+
+### Situação 1
+
+```prolog
+% Executar situação 1
+teste_sit1_sf1(Plan).
+````
+
+### Situação 2
+
+```prolog
+% Executar situação 2
+teste_sit2_s5(Plan).
+```
+
+### Situação 3
+
+```prolog
+% Executar situação 3
+teste_sit3_s7(Plan).
+```
+
 ## Questão 1 - Descrição do Problema em Linguagem Natural
 
 O problema consiste no empilhamento de blocos retangulares que possuem diferentes larguras, mas todos com a mesma altura unitária (altura = 1). Os blocos são identificados pelas letras **a**, **b**, **c** e **d**, com as seguintes larguras:
