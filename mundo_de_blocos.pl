@@ -1,322 +1,212 @@
-% =============================================================================
-% MUNDO DOS BLOCOS — Planejamento com move(B, Pi, Pj)
-% Compatível com SWISH (swish.swi-prolog.org)
-%
-% LARGURAS DOS BLOCOS:
-%   a → largura 1   b → largura 1   c → largura 2   d → largura 3
-%
-% REPRESENTAÇÃO DO ESTADO:
-%   Lista de pos(Bloco, ColunaEsquerda, Altura)
-%     • ColunaEsquerda : coluna mais à esquerda do bloco
-%     • Altura         : 0 = chão; N = N blocos abaixo (em todas as suas colunas)
-%
-% AÇÃO:  move(B, Pi, Pj)
-%   Pré-condições:
-%     1. B está com coluna-esquerda Pi.
-%     2. B está livre (nenhum bloco acima em QUALQUER coluna que ocupa).
-%     3. Pi ≠ Pj.
-%     4. Pj + largura(B) - 1 ≤ 6  (cabe no grid).
-%     5. A altura de destino é válida (blocos abaixo formam superfície plana).
-%     6. Não há sobreposição com outros blocos no destino.
-% =============================================================================
+% =================================================================
+% DECLARAÇÕES
+% =================================================================
+:- discontiguous can/2.
+:- discontiguous adds/2.
+:- discontiguous deletes/2.
 
+% =================================================================
+% 1. DEFINIÇÃO DO MUNDO
+% =================================================================
+block(a, 1).
+block(b, 1).
+block(c, 2).
+block(d, 3).
 
-% =============================================================================
-%  LARGURAS
-% =============================================================================
-largura(a, 1).
-largura(b, 1).
-largura(c, 2).
-largura(d, 3).
+object(X) :- block(X, _).
+object(floor).
 
-% colunas_do_bloco(+Bloco, +ColEsq, -ListaColunas)
-colunas_do_bloco(Bloco, ColEsq, Cols) :-
-    largura(Bloco, L),
-    ColDir is ColEsq + L - 1,
-    ColDir =< 6,
-    numlist(ColEsq, ColDir, Cols).
+% =================================================================
+% 2. ESTABILIDADE
+% =================================================================
+stable(B1, B2) :-
+    block(B1, W1),
+    block(B2, W2),
+    W1 =< W2.
 
+% =================================================================
+% 3. AÇÕES
+% =================================================================
+can(move(B, Pi, floor), [clear(B), on(B, Pi)]) :-
+    block(B, _),
+    block(Pi, _),
+    Pi \== floor,
+    Pi \== B.
 
-% =============================================================================
-%  PRIMITIVAS DE ESTADO
-% =============================================================================
+can(move(B, floor, floor), [clear(B), on(B, floor)]) :-
+    block(B, _).
 
-%% topo_livre(+Estado, +Bloco)
-%  Verdadeiro se NENHUMA coluna que Bloco ocupa tiver algo acima dele.
-topo_livre(Estado, Bloco) :-
-    member(pos(Bloco, Col, Alt), Estado),
-    colunas_do_bloco(Bloco, Col, Cols),
-    \+ (
-        member(pos(Outro, ColO, AltO), Estado),
-        Outro \= Bloco,
-        colunas_do_bloco(Outro, ColO, ColsO),
-        AltO > Alt,                          % Outro está acima
-        intersecao(Cols, ColsO, [_|_])       % e compartilha coluna com Bloco
-    ).
+can(move(B1, Pi, B2), [clear(B1), clear(B2), on(B1, Pi)]) :-
+    block(B1, _),
+    block(B2, _),
+    block(Pi, _),
+    B1 \== B2,
+    B1 \== Pi,
+    Pi \== B2,
+    stable(B1, B2).
 
-%% intersecao(+L1, +L2, -Inter)
-intersecao(L1, L2, Inter) :-
-    include(member_(L2), L1, Inter).
-member_(L, X) :- member(X, L).
+can(move(B1, floor, B2), [clear(B1), clear(B2), on(B1, floor)]) :-
+    block(B1, _),
+    block(B2, _),
+    B1 \== B2,
+    stable(B1, B2).
 
-%% altura_destino(+Estado, +Bloco, +ColEsq, -H)
-%  H = altura que Bloco ficará ao pousar em ColEsq.
-%  É o máximo de (Alt + Largura_bloco_embaixo) em todas as colunas que vai ocupar,
-%  considerando somente blocos cujo topo coincide com a superfície naquelas colunas.
-%
-%  Regra simplificada usada aqui:
-%    H = máxima "altura de superfície" dentre todas as colunas de destino.
-%    Altura de superfície de uma coluna C = max(Alt+1) para blocos que incluem C,
-%    ou 0 se vazia.
-altura_destino(Estado, Bloco, ColEsq, H) :-
-    colunas_do_bloco(Bloco, ColEsq, Cols),
-    maplist(superficie_coluna(Estado), Cols, Alts),
-    max_list(Alts, H).
+adds(move(B, Pi, Pj), [on(B, Pj), clear(Pi)]) :-
+    object(Pi),
+    object(Pj).
 
-%% superficie_coluna(+Estado, +Col, -H)
-%  Altura do topo da pilha na coluna Col (0 se vazia).
-superficie_coluna(Estado, Col, H) :-
-    findall(AltTopo,
-        (   member(pos(B, ColB, AltB), Estado),
-            colunas_do_bloco(B, ColB, Cols),
-            member(Col, Cols),
-            AltTopo is AltB + 1
-        ),
-        Alts),
-    (Alts = [] -> H = 0 ; max_list(Alts, H)).
+deletes(move(B, Pi, Pj), [on(B, Pi), clear(Pj)]) :-
+    object(Pi),
+    object(Pj).
 
-%% sem_sobreposicao(+Estado)
-%  Verifica que nenhum par de blocos distintos ocupa a mesma (coluna, altura).
-sem_sobreposicao(Estado) :-
-    \+ (
-        member(pos(B1, C1, A1), Estado),
-        member(pos(B2, C2, A2), Estado),
-        B1 @< B2,
-        colunas_do_bloco(B1, C1, Cols1),
-        colunas_do_bloco(B2, C2, Cols2),
-        intersecao(Cols1, Cols2, [_|_]),     % mesmas colunas
-        A1 =:= A2                            % mesma altura → sobreposição!
-    ).
+% =================================================================
+% 4. IMPOSSIBILIDADES
+% =================================================================
+impossible(on(X, X), _).
+impossible(on(X, Y), Goals) :-
+    member(on(X, Y1), Goals), Y1 \== Y
+    ;
+    member(on(X1, Y), Goals), X1 \== X.
 
-%% aplicar_move(+Estado, +B, +Pi, +Pj, -NovoEstado)
-aplicar_move(Estado, B, Pi, Pj, NovoEstado) :-
-    Pi \= Pj,
-    member(pos(B, Pi, _), Estado),           % B está em Pi
-    topo_livre(Estado, B),                   % B está livre
-    colunas_do_bloco(B, Pj, _),             % Pj válido no grid (falha se sair)
-    select(pos(B, Pi, _), Estado, Temp),     % remove B temporariamente
-    altura_destino(Temp, B, Pj, H),          % altura de pouso em Pj
-    NovoEstado = [pos(B, Pj, H) | Temp],
-    sem_sobreposicao(NovoEstado).            % segurança extra
+% =================================================================
+% 5. PLANEJADOR
+% =================================================================
+plan(State, Goals, Plan) :-
+    between(0, 6, MaxDepth),
+    plan(State, Goals, [], Plan, MaxDepth).
 
+plan(State, Goals, _, [], _) :-
+    satisfied(State, Goals).
 
-% =============================================================================
-%  BUSCA EM LARGURA — BFS
-% =============================================================================
+plan(State, Goals, Visited, [Action|Rest], MaxDepth) :-
+    MaxDepth > 0,
+    NextDepth is MaxDepth - 1,
+    seleciona(State, Goals, Goal),
+    achieves(Action, Goal),
+    can(Action, _),
+    preserves(Action, Goals),
+    \+ member(Action, Visited),
+    regress(Goals, Action, RegressedGoals),
+    plan(State, RegressedGoals, [Action|Visited], Rest, NextDepth).
 
-resolve(S0, Sf, Plano) :-
-    bfs([[S0, []]], Sf, PlanRev),
-    reverse(PlanRev, Plano).
+satisfied(State, Goals) :-
+    delete_all(Goals, State, []).
 
-bfs([[Estado, Plano] | _], Objetivo, Plano) :-
-    mesmo_estado(Estado, Objetivo), !.
+seleciona(_, Goals, Goal) :-
+    member(Goal, Goals).
 
-bfs([[Estado, Plano] | Resto], Objetivo, PlanFinal) :-
-    findall(
-        [Novo, [move(B,Pi,Pj) | Plano]],
-        (   member(pos(B, Pi, _), Estado),
-            member(Pj, [0,1,2,3,4,5,6]),
-            aplicar_move(Estado, B, Pi, Pj, Novo),
-            \+ ja_visitado(Novo, Resto)
-        ),
-        Filhos
-    ),
-    append(Resto, Filhos, NovaFila),
-    bfs(NovaFila, Objetivo, PlanFinal).
+achieves(Action, Goal) :-
+    adds(Action, Goals),
+    member(Goal, Goals).
 
-mesmo_estado(E1, E2) :- msort(E1, S), msort(E2, S).
+preserves(Action, Goals) :-
+    deletes(Action, Relations),
+    \+ (member(Goal, Relations),
+        member(Goal, Goals)).
 
-ja_visitado(Estado, Fila) :-
-    member([E, _], Fila), mesmo_estado(E, Estado), !.
+regress(Goals, Action, RegressedGoals) :-
+    adds(Action, NewRelations),
+    delete_all(Goals, NewRelations, RestGoals),
+    can(Action, Condition),
+    addnew(Condition, RestGoals, RegressedGoals).
 
+addnew([], L, L).
+addnew([Goal|_], Goals, _) :-
+    impossible(Goal, Goals), !,
+    fail.
+addnew([X|L1], L2, L3) :-
+    member(X, L2), !,
+    addnew(L1, L2, L3).
+addnew([X|L1], L2, [X|L3]) :-
+    addnew(L1, L2, L3).
 
-% =============================================================================
-%  UTILITÁRIO DE EXIBIÇÃO
-% =============================================================================
+delete_all([], _, []).
+delete_all([X|L1], L2, Diff) :-
+    member(X, L2), !,
+    delete_all(L1, L2, Diff).
+delete_all([X|L1], L2, [X|Diff]) :-
+    delete_all(L1, L2, Diff).
 
-exibir_plano([], N) :-
-    format("  (~w movimentos no total)~n", [N]).
-exibir_plano([move(B,Pi,Pj) | Resto], N) :-
-    format("  ~w. move(~w, ~w, ~w)~n", [N, B, Pi, Pj]),
-    N1 is N + 1,
-    exibir_plano(Resto, N1).
+% Planejador em duas fases
+plan_two_phase(State, Goals1, Goals2, Plan) :-
+    plan(State, Goals1, Plan1),
+    apply_plan(State, Plan1, MidState),
+    plan(MidState, Goals2, Plan2),
+    append(Plan1, Plan2, Plan).
 
-resolver_e_exibir(Label, S0, Sf) :-
-    format("~n--- ~w ---~n", [Label]),
-    (   resolve(S0, Sf, Plano)
-    ->  exibir_plano(Plano, 1)
-    ;   write("  [sem solucao]"), nl
-    ).
+% Aplica um plano a um estado
+apply_plan(State, [], State).
+apply_plan(State, [move(B, Pi, Pj)|Rest], FinalState) :-
+    adds(move(B, Pi, Pj), Add),
+    deletes(move(B, Pi, Pj), Del),
+    delete_all(State, Del, Temp),
+    append(Add, Temp, NewState),
+    apply_plan(NewState, Rest, FinalState).
 
+% =================================================================
+% 6. ESTADOS
+% =================================================================
+state_s0_sit1([
+    on(a, floor), on(b, floor),
+    on(c, floor), on(d, a),
+    clear(c), clear(d), clear(b)
+]).
 
-% =============================================================================
-%  SITUAÇÃO 1
-% =============================================================================
-%
-%  Grid (posições da coluna-esquerda de cada bloco):
-%
-%  S0:   c@col0(h0), a@col2(h0), b@col3(h0), d@col4(h0)
-%
-%    Col: 0  1  2  3  4  5  6
-%         [c  c] a  b [d  d  d]
-%
-%  Sf1:  c@col0(h0), a@col2(h0), b@col3(h0), d@col4(h0)  → reordenação no chão
-%    Col: 0  1  2  3  4  5  6
-%         a  b [c  c][d  d  d]
-%
-%  Sf2:  a@col0(h0), c@col1(h0), d@col3(h0), b@col6(h0)
-%    Col: 0  1  2  3  4  5  6
-%         a [c  c][d  d  d]  b
-%
-%  Sf3:  d@col0(h0), c@col3(h0), a@col5(h0), b@col6(h0)
-%    Col: 0  1  2  3  4  5  6
-%        [d  d  d][c  c] a  b
-%
-%  Sf4:  d@col0(h0), a@col3(h0), b@col4(h0), c@col5(h0)
-%    Col: 0  1  2  3  4  5  6
-%        [d  d  d] a  b [c  c]
-% =============================================================================
+state_s0_sit2([
+    on(a, c), on(b, c),
+    on(c, floor), on(d, floor),
+    clear(a), clear(b), clear(d)
+]).
 
-situacao1 :-
-    write("============================================"), nl,
-    write("              SITUACAO 1                    "), nl,
-    write("============================================"), nl,
+% =================================================================
+% 7. TESTES
+% =================================================================
 
-    S0  = [pos(c,0,0), pos(a,2,0), pos(b,3,0), pos(d,4,0)],
+% Situação 1 - S0 até Sf1
+% Fase 1: mover d para o chão
+% Fase 2: colocar a em cima de d
+% Fase 3: colocar b em cima de d
+teste_sit1_sf1(Plan) :-
+    state_s0_sit1(State),
+    plan(State, [on(d, floor)], Plan1),
+    apply_plan(State, Plan1, MidState1),
+    plan(MidState1, [on(a, d)], Plan2),
+    apply_plan(MidState1, Plan2, MidState2),
+    plan(MidState2, [on(b, d)], Plan3),
+    append(Plan1, Plan2, Temp),
+    append(Temp, Plan3, Plan).
 
-    Sf1 = [pos(a,0,0), pos(b,1,0), pos(c,2,0), pos(d,4,0)],
-    resolver_e_exibir('S0 -> Sf1  [a col0, b col1, c col2, d col4]', S0, Sf1),
+% Situação 2 - S0 até S5
+% Fase 1: tirar a e b de cima de c
+% Fase 2: colocar c em cima de d
+% Fase 3: colocar a em cima de c
+% Fase 4: colocar b em cima de c
+teste_sit2_s5(Plan) :-
+    state_s0_sit2(State),
+    plan(State, [on(a, floor)], Plan1),
+    apply_plan(State, Plan1, MidState1),
+    plan(MidState1, [on(b, floor)], Plan2),
+    apply_plan(MidState1, Plan2, MidState2),
+    plan(MidState2, [on(c, d)], Plan3),
+    apply_plan(MidState2, Plan3, MidState3),
+    plan(MidState3, [on(a, c)], Plan4),
+    apply_plan(MidState3, Plan4, MidState4),
+    plan(MidState4, [on(b, c)], Plan5),
+    append(Plan1, Plan2, Temp1),
+    append(Temp1, Plan3, Temp2),
+    append(Temp2, Plan4, Temp3),
+    append(Temp3, Plan5, Plan).
 
-    Sf2 = [pos(a,0,0), pos(c,1,0), pos(d,3,0), pos(b,6,0)],
-    resolver_e_exibir('S0 -> Sf2  [a col0, c col1, d col3, b col6]', S0, Sf2),
-
-    Sf3 = [pos(d,0,0), pos(c,3,0), pos(a,5,0), pos(b,6,0)],
-    resolver_e_exibir('S0 -> Sf3  [d col0, c col3, a col5, b col6]', S0, Sf3),
-
-    Sf4 = [pos(d,0,0), pos(a,3,0), pos(b,4,0), pos(c,5,0)],
-    resolver_e_exibir('S0 -> Sf4  [d col0, a col3, b col4, c col5]', S0, Sf4).
-
-
-% =============================================================================
-%  SITUAÇÃO 2
-% =============================================================================
-%
-%  S0:  a@col0(h0), c@col1(h0), b@col3(h0), d@col4(h0)
-%    Col: 0  1  2  3  4  5  6
-%         a [c  c] b [d  d  d]
-%
-%  S1:  b move col3 → col6
-%    Col: 0  1  2  3  4  5  6
-%         a [c  c]   [d  d  d] b
-%
-%  S2:  c move col1 → col3
-%    Col: 0  1  2  3  4  5  6
-%         a        [c  c][d  d  d] b
-%
-%  S3:  a move col0 → col1
-%    Col: 0  1  2  3  4  5  6
-%              a  [c  c][d  d  d] b
-%
-%  S4:  b move col6 → col0
-%    Col: 0  1  2  3  4  5  6
-%         b  a  [c  c][d  d  d]
-%
-%  S5 (meta):  b move col0 → col1... ajustado para encaixe final
-%    Col: 0  1  2  3  4  5  6
-%         a  b [c  c][d  d  d]
-% =============================================================================
-
-situacao2 :-
-    write("============================================"), nl,
-    write("              SITUACAO 2                    "), nl,
-    write("============================================"), nl,
-
-    S0 = [pos(a,0,0), pos(c,1,0), pos(b,3,0), pos(d,4,0)],
-    S1 = [pos(a,0,0), pos(c,1,0), pos(b,6,0), pos(d,4,0)],
-    S2 = [pos(a,0,0), pos(c,3,0), pos(b,6,0), pos(d,4,0)],
-    S3 = [pos(a,1,0), pos(c,3,0), pos(b,6,0), pos(d,4,0)],
-    S4 = [pos(b,0,0), pos(a,1,0), pos(c,3,0), pos(d,4,0)],
-    S5 = [pos(a,0,0), pos(b,1,0), pos(c,2,0), pos(d,4,0)],
-
-    resolver_e_exibir('S0 -> S1', S0, S1),
-    resolver_e_exibir('S1 -> S2', S1, S2),
-    resolver_e_exibir('S2 -> S3', S2, S3),
-    resolver_e_exibir('S3 -> S4', S3, S4),
-    resolver_e_exibir('S4 -> S5', S4, S5),
-    nl, write("  ==== Plano COMPLETO ===="), nl,
-    resolver_e_exibir('S0 -> S5', S0, S5).
-
-
-% =============================================================================
-%  SITUAÇÃO 3
-% =============================================================================
-%
-%  S0:  c@col0(h0), a@col2(h0), b@col3(h0), d@col4(h0)
-%    Col: 0  1  2  3  4  5  6
-%        [c  c] a  b [d  d  d]
-%
-%  S1:  a move col2 → col6
-%    Col: 0  1  2  3  4  5  6
-%        [c  c]    b [d  d  d] a
-%
-%  S2:  b move col3 → col2
-%    Col: 0  1  2  3  4  5  6
-%        [c  c] b    [d  d  d] a
-%
-%  S3:  d move col4 → col3
-%    Col: 0  1  2  3  4  5  6
-%        [c  c] b  [d  d  d]   a
-%
-%  S4:  a move col6 → col5
-%    Col: 0  1  2  3  4  5  6
-%        [c  c] b  [d  d  d] a
-%
-%  S5:  a sobe sobre c → a@col1(h1)
-%    Col: 0  1  2  3  4  5  6
-%        [c  c] b  [d  d  d]
-%         .  a
-%
-%  S6:  d move col3 → col4
-%    Col: 0  1  2  3  4  5  6
-%        [c  c] b     [d  d  d]
-%         .  a
-%
-%  S7 (meta):  b move col2 → col3
-%    Col: 0  1  2  3  4  5  6
-%        [c  c]    b  [d  d  d]
-%         .  a
-% =============================================================================
-
-situacao3 :-
-    write("============================================"), nl,
-    write("              SITUACAO 3                    "), nl,
-    write("============================================"), nl,
-
-    S0 = [pos(c,0,0), pos(a,2,0), pos(b,3,0), pos(d,4,0)],
-    S1 = [pos(c,0,0), pos(a,6,0), pos(b,3,0), pos(d,4,0)],
-    S2 = [pos(c,0,0), pos(a,6,0), pos(b,2,0), pos(d,4,0)],
-    S3 = [pos(c,0,0), pos(a,6,0), pos(b,2,0), pos(d,3,0)],
-    S4 = [pos(c,0,0), pos(a,5,0), pos(b,2,0), pos(d,3,0)],
-    S5 = [pos(c,0,0), pos(a,1,1), pos(b,2,0), pos(d,3,0)],
-    S6 = [pos(c,0,0), pos(a,1,1), pos(b,2,0), pos(d,4,0)],
-    S7 = [pos(c,0,0), pos(a,1,1), pos(b,3,0), pos(d,4,0)],
-
-    resolver_e_exibir('S0 -> S1', S0, S1),
-    resolver_e_exibir('S1 -> S2', S1, S2),
-    resolver_e_exibir('S2 -> S3', S2, S3),
-    resolver_e_exibir('S3 -> S4', S3, S4),
-    resolver_e_exibir('S4 -> S5', S4, S5),
-    resolver_e_exibir('S5 -> S6', S5, S6),
-    resolver_e_exibir('S6 -> S7', S6, S7),
-    nl, write("  ==== Plano COMPLETO ===="), nl,
-    resolver_e_exibir('S0 -> S7', S0, S7).
+% Situação 3 - S0 até S7
+% Fase 1: mover d para o chão
+% Fase 2: colocar a em cima de c
+% Fase 3: colocar b em cima de c
+teste_sit3_s7(Plan) :-
+    state_s0_sit1(State),
+    plan(State, [on(d, floor)], Plan1),
+    apply_plan(State, Plan1, MidState1),
+    plan(MidState1, [on(a, c)], Plan2),
+    apply_plan(MidState1, Plan2, MidState2),
+    plan(MidState2, [on(b, c)], Plan3),
+    append(Plan1, Plan2, Temp),
+    append(Temp, Plan3, Plan).
